@@ -49,6 +49,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         // 4. 保存验证码到session
         session.setAttribute("code",code);
+        session.setAttribute("phone",phone);
         // 5. 发送验证码
         log.debug("验证码为："+code);
 
@@ -67,7 +68,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         String phone = loginForm.getPhone();
         // 1. 校验手机号
-        if (RegexUtils.isPhoneInvalid(loginForm.getPhone())){
+        if (RegexUtils.isPhoneInvalid(phone)){
 
             // 2. 如果不符合return错误信息
             return Result.fail("手机号格式错误");
@@ -78,6 +79,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (cashCode == null || !cashCode.toString().equals(code)){
             // 3. 不一致报错
             return Result.fail("验证码错误");
+        }
+
+        // 2.1 校验手机号与session中的手机号是否一致
+        if (!phone.equals(session.getAttribute("phone"))){
+            return Result.fail("手机号与验证码不匹配");
         }
 
         // 4. 一致，根据手机号查询用户

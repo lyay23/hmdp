@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 /**
@@ -55,12 +56,14 @@ public class UserController {
 
     /**
      * 登出功能
+     * @param request HTTP请求对象，用于获取token
      * @return 无
      */
     @PostMapping("/logout")
-    public Result logout(){
-        // TODO 实现登出功能
-        return Result.fail("功能未完成");
+    public Result logout(HttpServletRequest request){
+        // 从请求头中获取token
+        String token = request.getHeader("authorization");
+        return userService.loginOut(token);
     }
 
     /**

@@ -12,10 +12,7 @@ import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
-import com.hmdp.utils.RedisConstants;
-import com.hmdp.utils.RegexPatterns;
-import com.hmdp.utils.RegexUtils;
-import com.hmdp.utils.SystemConstants;
+import com.hmdp.utils.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -139,5 +136,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 2. 保存到数据库
         save(user);
         return user;
+    }
+
+
+    /**
+     * 退出登录
+     * @param token 用户token
+     * @return
+     */
+    @Override
+    public Result loginOut(String token) {
+        // 1. 获取当前登录用户
+        UserDTO user = UserHolder.getUser();
+        if (user == null) {
+            return Result.fail("用户未登录");
+        }
+        
+        // 2. 从Redis中删除当前用户
+        if (token != null && !token.isEmpty()) {
+            stringRedisTemplate.delete(RedisConstants.LOGIN_USER_KEY + token);
+        }
+        
+        // 3. 返回成功
+        return Result.ok();
     }
 }

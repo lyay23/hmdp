@@ -54,7 +54,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return Result.fail("优惠券已被抢完");
         }
         // 4. 扣减优惠券数量
-        boolean success = seckillVoucherService.update().setSql("stock = stock - 1").eq("voucher_id", voucherId).update();
+        boolean success = seckillVoucherService.update()
+                .setSql("stock = stock - 1")
+                .eq("voucher_id", voucherId)
+                // CSA乐观锁
+                .gt("stock", 0)
+                .update();
         if(!success){
             return Result.fail("优惠券秒杀失败");
         }

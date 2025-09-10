@@ -9,6 +9,8 @@ import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
+import org.springframework.aop.framework.AopContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private ISeckillVoucherService seckillVoucherService;
 
+
+
     @Resource
     private RedisIdWorker idWorker;
 
@@ -38,7 +42,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
      * @return 订单信息
      */
     @Override
-    @Transactional
     public Result seckillVoucher(Long voucherId) {
         // 1. 查询优惠券信息
         SeckillVoucher voucherOrder = seckillVoucherService.getById(voucherId);
@@ -53,29 +56,68 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if(voucherOrder.getStock() <1){
             return Result.fail("优惠券已被抢完");
         }
-        // 4. 扣减优惠券数量
-        boolean success = seckillVoucherService.update()
-                .setSql("stock = stock - 1")
-                .eq("voucher_id", voucherId)
-                // CSA乐观锁
-                .gt("stock", 0)
-                .update();
-        if(!success){
-            return Result.fail("优惠券秒杀失败");
-        }
-        // 5. 创建订单
-        VoucherOrder order = new VoucherOrder();
-        long orderId = idWorker.nextId("order");
-        order.setId(orderId);
+
+        // 悲观锁-
+        // 加在方法上意思是所有用户都使用同一把锁，都需要等待上一把释放，而加在return那里判断的是用户ID，是并行的
         Long userId = UserHolder.getUser().getId();
-        order.setUserId(userId);
-        // 代金券id
-        order.setVoucherId(voucherId);
-        save(order);
-
-
-        // 6. 返回订单信息
-
-        return Result.ok(orderId);
+        synchronized (userId.toString().intern()) {
+            // 获取代理对象（代理对象事务）
+            // createVouncherOrder 方法上有 @Transactional 注解，但是当在同一个类内部直接调用时，Spring AOP 的事务代理不会生效
+            // Spring AOP 是基于代理的，只有通过代理对象调用方法时，AOP 增强（如事务）才会生效
+            IVoucherOrderService context = (IVoucherOrderService) AopContext.currentProxy();
+            return context.createVouncherOrder(voucherId);
+        }
     }
+
+    /**
+     * 使用悲观锁来完成一户一单
+     * @param voucherId
+     * @return
+     */
+    @Override
+    @Transactional
+    public  Result createVouncherOrder(Long voucherId) {
+        // 5. 一人一单
+        Long userId = UserHolder.getUser().getId();
+
+        // intern() 保证字符串常量池中的对象唯一,
+
+
+
+            // 5.1 查询订单
+            int count = query()
+                    .eq("user_id", userId)
+                    .eq("voucher_id", voucherId).count();
+            // 5.2 判断订单是否存在
+            if (count > 0) {
+                return Result.fail("您已购买过该优惠券");
+            }
+
+            // 4. 扣减优惠券数量
+            boolean success = seckillVoucherService.update()
+                    .setSql("stock = stock - 1")
+                    .eq("voucher_id", voucherId)
+                    // CSA乐观锁
+                    .gt("stock", 0)
+                    .update();
+            if (!success) {
+                return Result.fail("优惠券秒杀失败");
+            }
+
+            // 5. 创建订单
+            VoucherOrder order = new VoucherOrder();
+            long orderId = idWorker.nextId("order");
+            order.setId(orderId);
+
+            order.setUserId(userId);
+            // 代金券id
+            order.setVoucherId(voucherId);
+            save(order);
+
+
+            // 6. 返回订单信息
+
+            return Result.ok(orderId);
+        }
+
 }

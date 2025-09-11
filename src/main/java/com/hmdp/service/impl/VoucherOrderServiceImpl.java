@@ -8,9 +8,11 @@ import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
+import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private ISeckillVoucherService seckillVoucherService;
 
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
 
     @Resource
@@ -60,13 +64,35 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         // 悲观锁-
         // 加在方法上意思是所有用户都使用同一把锁，都需要等待上一把释放，而加在return那里判断的是用户ID，是并行的
         Long userId = UserHolder.getUser().getId();
-        synchronized (userId.toString().intern()) {
+
+
+        //-----------使用悲观锁解决一人一单的方案-------------------------------
+     //   synchronized (userId.toString().intern()) {
+        // -----------悲观锁结束-----------------
+
+
+
+        // -----------------使用分布式锁解决一人一单的方案-------------------------
+
+        // 创建锁
+        SimpleRedisLock lock = new SimpleRedisLock("order:" + userId,stringRedisTemplate );
+        // 获取锁
+        boolean b = lock.tryLock(120);
+        if(!b){
+            return Result.fail("开挂小子");
+        }
+        try {
             // 获取代理对象（代理对象事务）
             // createVouncherOrder 方法上有 @Transactional 注解，但是当在同一个类内部直接调用时，Spring AOP 的事务代理不会生效
             // Spring AOP 是基于代理的，只有通过代理对象调用方法时，AOP 增强（如事务）才会生效
             IVoucherOrderService context = (IVoucherOrderService) AopContext.currentProxy();
             return context.createVouncherOrder(voucherId);
+        } finally {
+            lock.unlock();
         }
+
+
+        // }
     }
 
     /**

@@ -27,4 +27,11 @@ public interface IBlogService extends IService<Blog> {
      * @return 点赞结果
      */
     Result likeBlog(Long id);
+
+    /**
+     * 查询热门博客
+     * @param current 当前页码
+     * @return 博客列表
+     */
+    Result queryHotBlog(Integer current);
 }

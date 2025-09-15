@@ -2,12 +2,13 @@ package com.hmdp.utils;
 
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.BooleanUtil;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
-import javax.annotation.Resource;
+
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 

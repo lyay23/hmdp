@@ -3,12 +3,12 @@ package com.hmdp.utils;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.hmdp.dto.UserDTO;
-import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -19,11 +19,11 @@ import java.util.concurrent.TimeUnit;
  * @Date: 2025/09/08/18:52
  * @Description: 总拦截器，用于刷新token，拦截所有页面并且刷新时间，把用户信息保存在threadLocal中
  */
-@RequiredArgsConstructor
+@Component
 public class RefreshTokenInterceptor implements HandlerInterceptor {
 
-
-    private final StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * 前置拦截

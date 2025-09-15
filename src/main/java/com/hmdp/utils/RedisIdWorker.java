@@ -1,10 +1,11 @@
 package com.hmdp.utils;
 
+import jakarta.annotation.Resource;
 import lombok.Data;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;

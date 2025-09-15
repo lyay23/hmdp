@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -310,15 +311,14 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                         .limit(end)
         );
         // 4. 解析出id
-        if(results == null){
-            return Result.ok();
+        if(results == null || results.getContent().isEmpty()){
+            return Result.ok(Collections.emptyList());
         }
-
-        // 保存商铺名称
 
         List<GeoResult<RedisGeoCommands.GeoLocation<String>>> content = results.getContent();
         List<Long> ids = new ArrayList<>(content.size());
         Map<String,Distance> distanceMap = new HashMap<>(content.size());
+        
         // 4.1 使用Stream流截取 from~end的部分
         content.stream().skip(from).forEach(result ->{
             // 商铺id
@@ -328,6 +328,12 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             Distance distance = result.getDistance();
             distanceMap.put(shopIdStr,distance);
         });
+        
+        // 4.2 检查是否有有效的店铺ID
+        if(ids.isEmpty()){
+            return Result.ok(Collections.emptyList());
+        }
+        
         // 5. 根据id查询Shop
         String str=StrUtil.join(",",ids);
         List<Shop> shops = query().in("id", ids).last("ORDER BY FIELD(id, " + str + ")").list();
